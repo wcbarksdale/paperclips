@@ -187,13 +187,16 @@ def run(driver):
         # computing
         upgrade_computer()
 
-        # one-time investment to trigger the $1M project
+        # we need at least one investment to trigger the $1M project
+        # currently, we invest if we have more cash than total asset value
         invested = nv('portValue')
-        if invested == 0:
+        if funds > invested:
             click('btnInvest')
 
-
-        # TODO upgrade engine
+        # upgrade engine
+        engineLevel = nv('investmentLevel')
+        if engineLevel is not None and engineLevel < 3:
+            click('btnImproveInvestments')
 
         #withdraw investment
         withdraw_if_cash_enough()
@@ -307,9 +310,9 @@ def run(driver):
             click('btnLowerProbeRep')
             click('btnRaiseProbeCombat')
             click('btnRaiseProbeCombat')
-            
+
         click('btnMakeProbe')
-            
+
     while True:
         try:
             totalClips = nv('clips')
