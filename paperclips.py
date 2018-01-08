@@ -7,10 +7,11 @@ from selenium.webdriver.common.action_chains import ActionChains
 from time import sleep
 from traceback import print_exc
 from random import random
+from os import getcwd
 
 def launch_driver():
     options = webdriver.ChromeOptions()
-    options.add_argument("user-data-dir=/Users/bill/mycode/paperclips/profile")
+    options.add_argument("user-data-dir=" + getcwd() + "/profile")
 
     driver = webdriver.Chrome(chrome_options=options)
     driver.get("http://www.decisionproblem.com/paperclips/index2.html")
@@ -119,6 +120,24 @@ def run(driver):
             print('Now buying:', enabled_project_buttons[0].text)
             enabled_project_buttons[0].click()
 
+    def least_monetary_upgrade_cost():
+        projects = driver.find_elements_by_css_selector('button.projectButton')
+        projects = [p for p in projects if p.is_displayed()]
+        def cost(project):
+            if '$' in project.text:
+                _, _, rest = project.text.partition('$')
+                amount = rest.split(')')[0]
+                return parse_number(amount)
+        costs = [cost(p) for p in projects if cost(p)]
+        if costs:
+            return min(costs)
+
+    def withdraw_if_cash_enough():
+        cash = nv('investmentBankroll')
+        cost = least_monetary_upgrade_cost()
+        if cost and cash >= cost:
+            click('btnWithdraw')
+
     def upgrade_computer():
         np = next_purchase(nv('processors'), nv('memory'))
         if np == 'processors':
@@ -173,7 +192,12 @@ def run(driver):
         if invested == 0:
             click('btnInvest')
 
-        # TODO upgrade engine/withdraw investment
+
+        # TODO upgrade engine
+
+        #withdraw investment
+        withdraw_if_cash_enough()
+
         run_tournament_periodically()
         buy_any_upgrade()
 
@@ -185,27 +209,24 @@ def run(driver):
         farms = nv('farmLevel')
         if farms == 0:
             click('btnMakeFarm')
+            farms += 1
         harvesters = nv('harvesterLevelDisplay')
         if harvesters == 0:
             click('btnMakeHarvester')
+            harvesters += 1
         wire_drones = nv('wireDroneLevelDisplay')
         if wire_drones == 0:
             click('btnMakeWireDrone')
+            wire_drones += 1
         factories = nv('factoryLevelDisplay')
         if factories == 0:
             click('btnMakeFactory')
+            factories += 1
 
         available_matter = nv('availableMatterDisplay')
         acquired_matter = nv('acquiredMatterDisplay')
         wire = nv('nanoWire')
 
-        if available_matter == 0:
-            click('btnHarvesterReboot')
-            if acquired_matter == 0:
-                click('btnWireDroneReboot')
-                if wire == 0:
-                    click('btnFactoryReboot')
-        
         if farms and harvesters and wire_drones and factories:
             # buy things that are very cheap
             unused = nv('unusedClipsDisplay')
@@ -245,6 +266,11 @@ def run(driver):
                 u = nv('unusedClipsDisplay')
                 fc = nv('factoryCostDisplay')
                 print('unused', u, 'rate', r, 'next factory cost', fc, 'expected in', (fc - u) / r)
+
+        if available_matter == 0 and acquired_matter == 0 and wire == 0:
+            click('btnHarvesterReboot')
+            click('btnWireDroneReboot')
+            click('btnFactoryReboot')
 
     def stage3():
         center_slider()
